@@ -18,7 +18,9 @@ currentMonthString = int(noww.strftime("%m"))
 currentDayString = int(noww.strftime("%d"))
 
 
+oldData = ""
 
+#dd
 #calification du temps systèeme par période
 now = datetime.now()
 currentTimeString = now.strftime("%H")
@@ -59,6 +61,7 @@ def on_subscribe(client, userdata, mid, granted_qos, properties=None):
 
 # print message, useful for checking if it was successful
 def on_message(client, userdata, msg):
+            global oldData
             data = str(msg.payload)
             data = data.replace('b', '')
             data = data.replace("'", '')
@@ -67,13 +70,16 @@ def on_message(client, userdata, msg):
                 if(len(data)==32):
                     docs = db.collection(u'Reservation').where(u'ClientID', u'==', data).where(periode, u'==', True).where(u'Year', u'==', currentYearString).where(u'Month', u'==', currentMonthString).where(u'Date', u'==', currentDayString).stream()
                     for doc in docs:
-                        
+                        if(oldData != data):
+                            oldData = data
                             reservation = doc.to_dict()
                             # a single publish, this can also be done in loops, etc.
                             valid = " Valid entry for the Client: "+str(reservation['ClientID'])
-                            client.publish("door/parkinny", payload=valid, qos=1)
+                            client.publish("open/parkinny", payload=valid, qos=1)
                             b=False
-                            playsound('./wlc.mp3')                      
+                            playsound('./wlc.mp3')  
+                        else:
+                            b=False                   
                     if(b):
                         playsound('./noReservationFound.mp3') 
                 else:
@@ -103,7 +109,7 @@ client.on_message = on_message
 client.on_publish = on_publish
 
 # subscribe to all topics of encyclopedia by using the wildcard "#"
-client.subscribe("open/#", qos=1)
+client.subscribe("door/#", qos=1)
 
 
 
